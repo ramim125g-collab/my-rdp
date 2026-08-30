@@ -1,0 +1,23 @@
+name: 24-7 Real Windows RDP
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Enable RDP & Install Chrome
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          net user runneradmin User@12345678 /add
+          net localgroup administrators runneradmin /add
+          Invoke-WebRequest -Uri "https://dl.google.com/chrome/install/latest/chrome_installer.exe" -OutFile "chrome.exe"
+          Start-Process -FilePath "chrome.exe" -Args "/silent /install" -Verb RunAs -Wait
+
+      - name: Setup Bore Tunnel
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "bore.zip"
+          Expand-Archive bore.zip -DestinationPath .
+          .\bore.exe local 3389 --to bore.pub
