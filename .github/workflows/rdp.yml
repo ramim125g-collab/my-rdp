@@ -1,20 +1,30 @@
-name: 24-7 Real Windows RDP
+name: GitHub Power Ubuntu RDP
 
-on: 
+on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
-      - name: Enable RDP
+      - name: Install Full Ubuntu Desktop & XRDP
         run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          net user runneradmin User@12345678
-      - name: Setup Bore Tunnel
+          sudo apt update
+          sudo apt install -y xfce4 xfce4-goodies xrdp
+
+      - name: Configure XRDP & Set Password
         run: |
-          Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "bore.zip"
-          Expand-Archive bore.zip -DestinationPath .
-          .\bore.exe local 3389 --to bore.pub
+          echo "runneradmin:123456" | sudo chpasswd
+          echo xfce4-session > ~/.xsession
+          sudo sed -i 's/max_bpp=32/max_bpp=16/g' /etc/xrdp/xrdp.ini
+          sudo service xrdp restart
+
+      - name: Install Cloudflare Tunnel
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+      - name: Start Cloudflare Tunnel
+        run: |
+          cloudflared tunnel --url tcp://localhost:3389
           
